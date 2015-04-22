@@ -38,11 +38,15 @@ static u8 g_rx_buf[256];
 #define WRITE_DISABLE(a)		 spi_nor_cmd_1byte(a, WRDI)
 #define ENABLE_WRITE_STATUS(a)	 spi_nor_cmd_1byte(a, EWSR)
 
+/* steven: add idcode2 to check device id */
+/* steven: add page_size for non-sst spi rom */
 struct imx_spi_flash_params {
 	u8		idcode1;
+	u8		idcode2;
 	u32		block_size;
 	u32		block_count;
 	u32		device_size;
+	u32		page_size;
 	const char	*name;
 };
 
@@ -60,12 +64,53 @@ to_imx_spi_flash(struct spi_flash *flash)
 static const struct imx_spi_flash_params imx_spi_flash_table[] = {
 	{
 		.idcode1		= 0x25,
+		.idcode2		= 0x41,
 		.block_size		= SZ_64K,
 		.block_count		= 32,
 		.device_size		= SZ_64K * 32,
+		.page_size		= 256,
 		.name			= "SST25VF016B - 2MB",
 	},
+	{ /* vendor id = 0xBF */
+		.idcode1		= 0x25,
+		.idcode2		= 0x4A,
+		.block_size		= SZ_64K,
+		.block_count		= 64,
+		.device_size		= SZ_64K * 64,
+		.page_size		= 256,
+		.name			= "SST25VF032B - 4MB",
+	},
+	{ /* vendor id = 0xEF */
+		.idcode1		= 0x40,
+		.idcode2		= 0x16,
+		.block_size		= SZ_64K,
+		.block_count		= 64,
+		.device_size		= SZ_64K * 64,
+		.page_size		= 256,
+		.name			= "W25Q32FV - 4MB",
+	},
+	{ /* vendor id = 0xC2 */
+		.idcode1		= 0x20,
+		.idcode2		= 0x16,
+		.block_size		= SZ_64K,
+		.block_count		= 64,
+		.device_size		= SZ_64K * 64,
+		.page_size		= 256,
+		.name			= "MX25L3206E - 4MB",
+	},
+	{ /* vendor id = 0x20 */
+		.idcode1		= 0xBA,
+		.idcode2		= 0x16,
+		.block_size		= SZ_64K,
+		.block_count		= 64,
+		.device_size		= SZ_64K * 64,
+		.page_size		= 256,
+		.name			= "N25Q032A - 4MB",
+	},
 };
+
+/* steven: support mw1 */
+#include "spi_mw1.c"
 
 static s32 spi_nor_flash_query(struct spi_flash *flash, void* data)
 {
@@ -505,7 +550,8 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs, unsigned in
 
 	for (i = 0; i < ARRAY_SIZE(imx_spi_flash_table); ++i) {
 		params = &imx_spi_flash_table[i];
-		if (params->idcode1 == idcode[1])
+  /* steven: check device id */
+		if ( (params->idcode1 == idcode[1]) && (params->idcode2== idcode[2]) )
 			break;
 	}
 
@@ -521,9 +567,19 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs, unsigned in
 	imx_sf->flash.name = params->name;
 	imx_sf->flash.size = params->device_size;
 
-	imx_sf->flash.read  = spi_nor_flash_read;
-	imx_sf->flash.write = spi_nor_flash_write;
-	imx_sf->flash.erase = spi_nor_flash_erase;
+	/* steven: support mw1 */
+	switch(idcode[0]) {
+	case 0xBF: /* sst spi rom */
+		imx_sf->flash.read  = spi_nor_flash_read;
+		imx_sf->flash.write = spi_nor_flash_write;
+		imx_sf->flash.erase = spi_nor_flash_erase;
+		break;
+	default: /* m25p32, w25q32, WX25L3206E spi rom */
+		imx_sf->flash.read  = mw1_spi_nor_flash_read;
+		imx_sf->flash.write = mw1_spi_nor_flash_write;
+		imx_sf->flash.erase = mw1_spi_nor_flash_erase;
+		break;
+	} 
 
 	debug("SF: Detected %s with block size %lu, "
 			"block count %lu, total %u bytes\n",

@@ -24,6 +24,15 @@
 
 #include <asm/arch/mx6.h>
 
+// steven
+//#define VAB820_FACTORY
+// ram size: CONFIG_FLASH_PLUG_IN=auto detect
+#define CONFIG_FLASH_PLUG_IN
+//#define VAB820_4G
+// vab820 version
+#define CONFIG_IDENT_STRING " VAB820 ver:1.0.10"
+
+
  /* High Level Configuration Options */
 #define CONFIG_ARMV7	/* This is armv7 Cortex-A9 CPU core */
 #define CONFIG_MXC
@@ -115,37 +124,54 @@
 #define CONFIG_LOADADDR		0x10800000	/* loadaddr env var */
 #define CONFIG_RD_LOADADDR      0x11000000
 
+// Steven
+#ifdef VAB820_FACTORY
 #define	CONFIG_EXTRA_ENV_SETTINGS \
 		"netdev=eth0\0" \
 		"ethprime=FEC0\0" \
 		"ethaddr=00:01:02:03:04:05\0" \
 		"uboot=u-boot.bin\0" \
 		"kernel=uImage\0" \
-		"bootargs=console=ttymxc1,115200\0" \
-		"bootargs_base=setenv bootargs console=ttymxc1,115200\0" \
-		"bootargs_nfs=setenv bootargs ${bootargs} root=/dev/nfs " \
-			"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp " \
-			"video=mxcfb0:dev=ldb,LDB-XGA,if=RGB666\0" \
-		"bootcmd_net=dhcp; run bootargs_base bootargs_nfs;bootm\0" \
-		"bootargs_mmc=setenv bootargs ${bootargs} " \
-			"root=/dev/mmcblk0p1 rootwait rw " \
-			"video=mxcfb0:dev=ldb,LDB-XGA,if=RGB666 " \
-			"video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24\0" \
-		"bootcmd_mmc=run bootargs_base bootargs_mmc;mmc dev 1;" \
-			"mmc read ${loadaddr} 0x800 0x2000;bootm\0" \
-		"bootcmd=run bootcmd_mmc\0" \
-		"clearenv=sf probe 1 && sf erase 0xc0000 0x2000 && " \
-			"echo restored environment to factory default\0" \
-		"upgradeu=for disk in 0 1 ; do mmc dev ${disk} ;" \
-				"for fs in fat ext2 ; do " \
-					"${fs}load mmc ${disk}:1 10008000 " \
-						"/6q_upgrade && " \
-					"source 10008000 ; " \
-				"done ; " \
-			"done\0" \
-		"bootfile=_BOOT_FILE_PATH_IN_TFTP_\0" \
-		"nfsroot=_ROOTFS_PATH_IN_NFS_\0"
-
+		"vkernel=/boot/uImage.vab820\0" \
+		"hdmi=video=mxcfb0:dev=hdmi,1920x1080M@60,bpp=32\0"\
+		"lvds_auo_g007=video=mxcfb0:dev=ldb,480C60,if=RGB24 ldb=sin0\0"\
+		"lvds_auo_g140=video=mxcfb0:dev=ldb,LDB-XGA,if=RGB24 ldb=sin0\0"\
+		"lvds_auo_g220=video=mxcfb0:dev=ldb,LDB-WSXGA+,if=RGB24 ldb=spl0\0"\
+		"lvds_qa=video=mxcfb0:dev=ldb,LDB-SXGA,if=RGB24 ldb=spl0\0"\
+		"lvds=video=mxcfb0:dev=ldb,LDB-XGA,if=RGB24 ldb=sin0\0"\
+		"hdmilvds=video=mxcfb0:dev=hdmi,1920x1080@60,bpp=32 video=mxcfb1:dev=ldb,LDB-SXGA,if=RGB24 ldb=spl0\0"\
+		"bootargs_base=setenv bootargs console=ttymxc1,115200 ${hdmilvds} vmalloc=320M console=tty1,115200\0"\
+		"viewsfenv=sf probe 1 ; sf read 0x10800000 0xc0000 0x2000 ; md 0x10800000\0" \
+		"clearsfenv=sf probe 1 ; sf erase 0xc0000 0x2000 ; echo flash environment.\0" \
+		"bootargs_mmc=setenv bootargs ${bootargs} root=/dev/mmcblk0p1 rootwait rw\0"     \
+		"bootcmd_mmc=run bootargs_base bootargs_mmc; mmc dev 1; ext2load mmc 1:1 $loadaddr $vkernel && bootm\0"   \
+		"bootargs_sd=setenv bootargs ${bootargs} root=/dev/mmcblk1p1 rootwait rw fec_mac=${ethaddr}\0"     \
+		"bootcmd_sd=run bootargs_base bootargs_sd; mmc dev 0; ext2load mmc 0:1 $loadaddr $vkernel && bootm\0"   \
+  "bootcmd_factory=mmc dev 0; ext2load mmc 0:1 10008000 /via_boot && source 10008000;\0" \
+		"bootcmd=run bootcmd_factory\0"
+#else
+// steven: default config
+#define	CONFIG_EXTRA_ENV_SETTINGS \
+		"netdev=eth0\0" \
+		"ethprime=FEC0\0" \
+		"ethaddr=00:01:02:03:04:05\0" \
+		"uboot=u-boot.bin\0" \
+		"kernel=uImage\0" \
+		"vkernel=/boot/uImage.vab820\0" \
+		"hdmi=video=mxcfb0:dev=hdmi,1920x1080M@60,bpp=32\0"\
+		"lvds_auo_g007=video=mxcfb0:dev=ldb,480C60,if=RGB24 ldb=sin0\0"\
+		"lvds_auo_g140=video=mxcfb0:dev=ldb,LDB-XGA,if=RGB24 ldb=sin0\0"\
+		"lvds_auo_g220=video=mxcfb0:dev=ldb,LDB-WSXGA+,if=RGB24 ldb=spl0\0"\
+		"lvds=video=mxcfb0:dev=ldb,LDB-XGA,if=RGB24 ldb=sin0\0"\
+		"bootargs_base=setenv bootargs console=ttymxc1,115200 ${hdmi} vmalloc=320M console=tty1,115200\0"\
+		"viewsfenv=sf probe 1 ; sf read 0x10800000 0xc0000 0x2000 ; md 0x10800000\0" \
+		"clearsfenv=sf probe 1 ; sf erase 0xc0000 0x2000 ; echo flash environment.\0" \
+		"bootargs_mmc=setenv bootargs ${bootargs} root=/dev/mmcblk0p1 rootwait rw\0"     \
+		"bootcmd_mmc=run bootargs_base bootargs_mmc; mmc dev 1; ext2load mmc 1:1 $loadaddr $vkernel && bootm\0"   \
+		"bootargs_sd=setenv bootargs ${bootargs} root=/dev/mmcblk1p1 rootwait rw\0"     \
+		"bootcmd_sd=run bootargs_base bootargs_sd; mmc dev 0; ext2load mmc 0:1 $loadaddr $vkernel && bootm\0"   \
+		"bootcmd=run bootcmd_mmc\0"
+#endif
 
 #define CONFIG_ARP_TIMEOUT	200UL
 
@@ -153,7 +179,9 @@
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-#define CONFIG_SYS_PROMPT		"MX6Q SABRELITE U-Boot > "
+// Steven: both support iMX6Q and iMX6DL
+#define CONFIG_SYS_PROMPT		"MX6   VAB820 U-Boot > "
+
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_CBSIZE		1024	/* Console I/O Buffer Size */
 /* Print Buffer Size */
@@ -181,7 +209,9 @@
 #define CONFIG_FEC0_MIIBASE	-1
 #define CONFIG_GET_FEC_MAC_ADDR_FROM_IIM
 #define CONFIG_MXC_FEC
-#define CONFIG_FEC0_PHY_ADDR		6
+// steven: tftp 
+#define CONFIG_FEC0_PHY_ADDR		0xff
+#define CONFIG_DISCOVER_PHY
 #define CONFIG_ETH_PRIME
 #define CONFIG_RMII
 #define CONFIG_PHY_MICREL_KSZ9021
@@ -284,9 +314,10 @@
  */
 #define CONFIG_NR_DRAM_BANKS	1
 #define PHYS_SDRAM_1		CSD0_DDR_BASE_ADDR
-#define PHYS_SDRAM_1_SIZE	(1u * 1024 * 1024 * 1024)
-#define iomem_valid_addr(addr, size) \
-	(addr >= PHYS_SDRAM_1 && addr <= (PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE))
+// Steven: DON'T access more than 1GB address on uboot
+#define PHYS_SDRAM_1_SIZE	(2u * 1024 * 1024 * 1024)
+//#define iomem_valid_addr(addr, size) \
+//	(addr >= PHYS_SDRAM_1 && addr <= (PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE))
 
 /*-----------------------------------------------------------------------
  * FLASH and environment organization
@@ -294,9 +325,12 @@
 #define CONFIG_SYS_NO_FLASH
 
 /* Monitor at beginning of flash */
-/* #define CONFIG_FSL_ENV_IN_MMC */
 /* #define CONFIG_FSL_ENV_IN_SATA */
-#define CONFIG_FSL_ENV_IN_SF
+#ifdef VAB820_FACTORY
+ #define CONFIG_FSL_ENV_IN_MMC
+#else
+ #define CONFIG_FSL_ENV_IN_SF
+#endif
 
 #define CONFIG_ENV_SECT_SIZE    (8 * 1024)
 #define CONFIG_ENV_SIZE         CONFIG_ENV_SECT_SIZE

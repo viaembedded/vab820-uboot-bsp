@@ -215,7 +215,9 @@ static int display_dram_config (void)
 		size += gd->bd->bi_dram[i].size;
 	}
 	puts("DRAM:  ");
-	print_size(size, "\n");
+ //steven: unit: MB
+ printf("%d MB\n", ((size>>18)+3)>>2 );
+//	print_size(size, "\n");
 #endif
 
 	return (0);

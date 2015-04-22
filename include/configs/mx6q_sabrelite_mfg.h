@@ -24,6 +24,14 @@
 
 #include <asm/arch/mx6.h>
 
+// steven: SoC
+#define VAB820_MX6Q
+//#define VAB820_MX6DL
+// steven: DRAM size
+#define VAB820_1G
+//#define VAB820_2G
+//#define VAB820_4G
+
  /* High Level Configuration Options */
 #define CONFIG_MFG
 #define CONFIG_ARMV7	/* This is armv7 Cortex-A9 CPU core */
@@ -129,7 +137,8 @@
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-#define CONFIG_SYS_PROMPT		"MX6Q SABRELITE-MFG U-Boot > "
+// steven
+#define CONFIG_SYS_PROMPT		"MX6Q VAB820-MFG U-Boot > "
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
 /* Print Buffer Size */

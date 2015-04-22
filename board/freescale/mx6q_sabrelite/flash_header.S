@@ -25,6 +25,8 @@
 # error "Must define the offset of flash header"
 #endif
 
+#ifndef CONFIG_FLASH_PLUG_IN
+
 #define CPU_2_BE_32(l) \
        ((((l) & 0x000000FF) << 24) | \
 	(((l) & 0x0000FF00) << 8)  | \
@@ -53,121 +55,250 @@ boot_data:        .word TEXT_BASE
 image_len:        .word _end_of_copy  - TEXT_BASE + CONFIG_FLASH_HEADER_OFFSET
 plugin:           .word 0x0
 
-dcd_hdr:          .word 0x40D802D2 /* Tag=0xD2, Len=90*8 + 4 + 4, Ver=0x40 */
-write_dcd_cmd:    .word 0x04D402CC /* Tag=0xCC, Len=90*8 + 4, Param=0x04 */
+// steven: only for mfg_tool, ref. mx6q_sabrelite_mfg.h
+#ifdef VAB820_MX6Q
+# steven: old value, Len=90
+  dcd_hdr:          .word 0x40D802D2 /* Tag=0xD2, Len=90*8 + 4 + 4, Ver=0x40 */
+  write_dcd_cmd:    .word 0x04D402CC /* Tag=0xCC, Len=90*8 + 4, Param=0x04 */
 
-/* DCD */
+#  dcd_hdr:          .word 0x40A002D2 /* Tag=0xD2, Len=83*8 + 4 + 4, Ver=0x40 */
+#  write_dcd_cmd:    .word 0x049C02CC /* Tag=0xCC, Len=83*8 + 4, Param=0x04 */
 
-MXC_DCD_ITEM(1, IOMUXC_BASE_ADDR + 0x5a8, 0x00000030)
-MXC_DCD_ITEM(2, IOMUXC_BASE_ADDR + 0x5b0, 0x00000030)
-MXC_DCD_ITEM(3, IOMUXC_BASE_ADDR + 0x524, 0x00000030)
-MXC_DCD_ITEM(4, IOMUXC_BASE_ADDR + 0x51c, 0x00000030)
+# steven: vab820_mx6q_1g, vab820_mx6q_2g must write Len=83
+  #ifdef VAB820_4G
+  #include "vab820_mx6q_4g.cfg"
+  #elif defined(VAB820_2G)
+  // imx6q_2g_ram
+  #include "vab820_mx6q_2g.cfg"
+  #else
+  // imx6q_1g_ram
+  #include "vab820_mx6q_1g.cfg"
+  #endif
 
-MXC_DCD_ITEM(5, IOMUXC_BASE_ADDR + 0x518, 0x00000030)
-MXC_DCD_ITEM(6, IOMUXC_BASE_ADDR + 0x50c, 0x00000030)
-MXC_DCD_ITEM(7, IOMUXC_BASE_ADDR + 0x5b8, 0x00000030)
-MXC_DCD_ITEM(8, IOMUXC_BASE_ADDR + 0x5c0, 0x00000030)
+// steven: only for mfg_tool, ref. mx6q_sabrelite_mfg.h
+#elif  defined(VAB820_MX6DL)
 
-MXC_DCD_ITEM(9, IOMUXC_BASE_ADDR + 0x5ac, 0x00020030)
-MXC_DCD_ITEM(10, IOMUXC_BASE_ADDR + 0x5b4, 0x00020030)
-MXC_DCD_ITEM(11, IOMUXC_BASE_ADDR + 0x528, 0x00020030)
-MXC_DCD_ITEM(12, IOMUXC_BASE_ADDR + 0x520, 0x00020030)
+  dcd_hdr:          .word 0x40A002D2 /* Tag=0xD2, Len=83*8 + 4 + 4, Ver=0x40 */
+  write_dcd_cmd:    .word 0x049C02CC /* Tag=0xCC, Len=83*8 + 4, Param=0x04 */
 
-MXC_DCD_ITEM(13, IOMUXC_BASE_ADDR + 0x514, 0x00020030)
-MXC_DCD_ITEM(14, IOMUXC_BASE_ADDR + 0x510, 0x00020030)
-MXC_DCD_ITEM(15, IOMUXC_BASE_ADDR + 0x5bc, 0x00020030)
-MXC_DCD_ITEM(16, IOMUXC_BASE_ADDR + 0x5c4, 0x00020030)
+  #ifdef VAB820_2G
+  // imx6dl_2g_ram
+  #include "vab820_mx6dl_2g.cfg"
+  #else
+  // imx6dl_1g_ram
+  #include "vab820_mx6dl_1g.cfg"
+  #endif
 
-MXC_DCD_ITEM(17, IOMUXC_BASE_ADDR + 0x56c, 0x00020030)
-MXC_DCD_ITEM(18, IOMUXC_BASE_ADDR + 0x578, 0x00020030)
-MXC_DCD_ITEM(19, IOMUXC_BASE_ADDR + 0x588, 0x00020030)
-MXC_DCD_ITEM(20, IOMUXC_BASE_ADDR + 0x594, 0x00020030)
+#endif /* end of MX6 */
 
-MXC_DCD_ITEM(21, IOMUXC_BASE_ADDR + 0x57c, 0x00020030)
-MXC_DCD_ITEM(22, IOMUXC_BASE_ADDR + 0x590, 0x00003000)
-MXC_DCD_ITEM(23, IOMUXC_BASE_ADDR + 0x598, 0x00003000)
-MXC_DCD_ITEM(24, IOMUXC_BASE_ADDR + 0x58c, 0x00000000)
 
-MXC_DCD_ITEM(25, IOMUXC_BASE_ADDR + 0x59c, 0x00003030)
-MXC_DCD_ITEM(26, IOMUXC_BASE_ADDR + 0x5a0, 0x00003030)
-MXC_DCD_ITEM(27, IOMUXC_BASE_ADDR + 0x784, 0x00000030)
-MXC_DCD_ITEM(28, IOMUXC_BASE_ADDR + 0x788, 0x00000030)
+#else /* CONFIG_FLASH_PLUG_IN */
 
-MXC_DCD_ITEM(29, IOMUXC_BASE_ADDR + 0x794, 0x00000030)
-MXC_DCD_ITEM(30, IOMUXC_BASE_ADDR + 0x79c, 0x00000030)
-MXC_DCD_ITEM(31, IOMUXC_BASE_ADDR + 0x7a0, 0x00000030)
-MXC_DCD_ITEM(32, IOMUXC_BASE_ADDR + 0x7a4, 0x00000030)
 
-MXC_DCD_ITEM(33, IOMUXC_BASE_ADDR + 0x7a8, 0x00000030)
-MXC_DCD_ITEM(34, IOMUXC_BASE_ADDR + 0x748, 0x00000030)
-MXC_DCD_ITEM(35, IOMUXC_BASE_ADDR + 0x74c, 0x00000030)
-MXC_DCD_ITEM(36, IOMUXC_BASE_ADDR + 0x750, 0x00020000)
+#define ROM_API_TABLE_BASE_ADDR_LEGACY		0xC0
+#define ROM_API_TABLE_BASE_ADDR_MX6DQ_TO15	0xC4
+#define ROM_API_TABLE_BASE_ADDR_MX6DL_TO12	0xC4
+#define ROM_API_HWCNFG_SETUP_OFFSET		0x08
+#define ROM_VERSION_OFFSET			0x48
+#define ROM_VERSION_TO12			0x12
+#define ROM_VERSION_TO15			0x15
+#define IRAM_FREE_START		0x00907000
 
-MXC_DCD_ITEM(37, IOMUXC_BASE_ADDR + 0x758, 0x00000000)
-MXC_DCD_ITEM(38, IOMUXC_BASE_ADDR + 0x774, 0x00020000)
-MXC_DCD_ITEM(39, IOMUXC_BASE_ADDR + 0x78c, 0x00000030)
-MXC_DCD_ITEM(40, IOMUXC_BASE_ADDR + 0x798, 0x000C0000)
+#define MXC_DCD_ITEM(i, addr, val)   \
+ ldr r1, =val; \
+ ldr r0, =addr; \
+ str r1, [r0];
 
-MXC_DCD_ITEM(41, MMDC_P0_BASE_ADDR + 0x81c, 0x33333333)
-MXC_DCD_ITEM(42, MMDC_P0_BASE_ADDR + 0x820, 0x33333333)
-MXC_DCD_ITEM(43, MMDC_P0_BASE_ADDR + 0x824, 0x33333333)
-MXC_DCD_ITEM(44, MMDC_P0_BASE_ADDR + 0x828, 0x33333333)
 
-MXC_DCD_ITEM(45, MMDC_P1_BASE_ADDR + 0x81c, 0x33333333)
-MXC_DCD_ITEM(46, MMDC_P1_BASE_ADDR + 0x820, 0x33333333)
-MXC_DCD_ITEM(47, MMDC_P1_BASE_ADDR + 0x824, 0x33333333)
-MXC_DCD_ITEM(48, MMDC_P1_BASE_ADDR + 0x828, 0x33333333)
 
-MXC_DCD_ITEM(49, MMDC_P0_BASE_ADDR + 0x018, 0x00081740)
+.section ".text.flasheader", "x"
+origin:
+	b	_start
+	.org	CONFIG_FLASH_HEADER_OFFSET
 
-MXC_DCD_ITEM(50, MMDC_P0_BASE_ADDR + 0x01c, 0x00008000)
-MXC_DCD_ITEM(51, MMDC_P0_BASE_ADDR + 0x00c, 0x555A7975)
-MXC_DCD_ITEM(52, MMDC_P0_BASE_ADDR + 0x010, 0xFF538E64)
-MXC_DCD_ITEM(53, MMDC_P0_BASE_ADDR + 0x014, 0x01FF00DB)
-MXC_DCD_ITEM(54, MMDC_P0_BASE_ADDR + 0x02c, 0x000026D2)
+/* First IVT to copy the plugin that initializes the system into OCRAM */
+ivt_header:             .long 0x402000D1    /*Tag=0xD1, Len=0x0020, Ver=0x40 */
+app_code_jump_v:        .long IRAM_FREE_START + (plugin_start - origin)    /* Plugin entry point, address after the second IVT table */
+reserv1:                .long 0x0
+dcd_ptr:                .long 0x0
+boot_data_ptr:          .long IRAM_FREE_START + (boot_data - origin) /*0x00907420*/
+self_ptr:               .long IRAM_FREE_START + (ivt_header - origin)
+app_code_csf:           .long 0x0
+reserv2:                .long 0x0
 
-MXC_DCD_ITEM(55, MMDC_P0_BASE_ADDR + 0x030, 0x005B0E21)
-MXC_DCD_ITEM(56, MMDC_P0_BASE_ADDR + 0x008, 0x09444040)
-MXC_DCD_ITEM(57, MMDC_P0_BASE_ADDR + 0x004, 0x00025576)
-MXC_DCD_ITEM(58, MMDC_P0_BASE_ADDR + 0x040, 0x00000027)
-MXC_DCD_ITEM(59, MMDC_P0_BASE_ADDR + 0x000, 0x831A0000)
+boot_data:              .long IRAM_FREE_START
+image_len:              .long 16*1024  /* plugin can be upto 16KB in size */
+plugin:                 .long 0x1  /* Enable plugin flag */
 
-MXC_DCD_ITEM(60, MMDC_P0_BASE_ADDR + 0x01c, 0x04088032)
-MXC_DCD_ITEM(61, MMDC_P0_BASE_ADDR + 0x01c, 0x0408803A)
-MXC_DCD_ITEM(62, MMDC_P0_BASE_ADDR + 0x01c, 0x00008033)
-MXC_DCD_ITEM(63, MMDC_P0_BASE_ADDR + 0x01c, 0x0000803B)
-MXC_DCD_ITEM(64, MMDC_P0_BASE_ADDR + 0x01c, 0x00428031)
-MXC_DCD_ITEM(65, MMDC_P0_BASE_ADDR + 0x01c, 0x00428039)
-MXC_DCD_ITEM(66, MMDC_P0_BASE_ADDR + 0x01c, 0x09408030)
-MXC_DCD_ITEM(67, MMDC_P0_BASE_ADDR + 0x01c, 0x09408038)
+/* Second IVT to give entry point into the bootloader copied to DDR */
+ivt2_header:            .long 0x402000D1    /*Tag=0xD1, Len=0x0020, Ver=0x40 */
+app2_code_jump_v:       .long _start       /* Entry point for uboot */
+reserv3:                .long 0x0
+dcd2_ptr:               .long 0x0
+boot_data2_ptr:         .long boot_data2
+self_ptr2:              .long ivt2_header
+app_code_csf2:          .long 0x0
+reserv4:                .long 0x0
 
-MXC_DCD_ITEM(68, MMDC_P0_BASE_ADDR + 0x01c, 0x04008040)
-MXC_DCD_ITEM(69, MMDC_P0_BASE_ADDR + 0x01c, 0x04008048)
-MXC_DCD_ITEM(70, MMDC_P0_BASE_ADDR + 0x800, 0xA1380003)
-MXC_DCD_ITEM(71, MMDC_P1_BASE_ADDR + 0x800, 0xA1380003)
-MXC_DCD_ITEM(72, MMDC_P0_BASE_ADDR + 0x020, 0x00005800)
-MXC_DCD_ITEM(73, MMDC_P0_BASE_ADDR + 0x818, 0x00000007)
-MXC_DCD_ITEM(74, MMDC_P1_BASE_ADDR + 0x818, 0x00000007)
+boot_data2:             .long TEXT_BASE
+image_len2:             .long _end_of_copy  - TEXT_BASE + CONFIG_FLASH_HEADER_OFFSET
+plugin2:                .long 0x0
 
-MXC_DCD_ITEM(75, MMDC_P0_BASE_ADDR + 0x83c, 0x434B0350)
-MXC_DCD_ITEM(76, MMDC_P0_BASE_ADDR + 0x840, 0x034C0359)
-MXC_DCD_ITEM(77, MMDC_P1_BASE_ADDR + 0x83c, 0x434B0350)
-MXC_DCD_ITEM(78, MMDC_P1_BASE_ADDR + 0x840, 0x03650348)
-MXC_DCD_ITEM(79, MMDC_P0_BASE_ADDR + 0x848, 0x4436383B)
-MXC_DCD_ITEM(80, MMDC_P1_BASE_ADDR + 0x848, 0x39393341)
-MXC_DCD_ITEM(81, MMDC_P0_BASE_ADDR + 0x850, 0x35373933)
-MXC_DCD_ITEM(82, MMDC_P1_BASE_ADDR + 0x850, 0x48254A36)
+/* Here starts the plugin code */
+plugin_start:
+/* Save the return address and the function arguments */
+    push    {r0-r4, lr}
 
-MXC_DCD_ITEM(83, MMDC_P0_BASE_ADDR + 0x80c, 0x001F001F)
-MXC_DCD_ITEM(84, MMDC_P0_BASE_ADDR + 0x810, 0x001F001F)
 
-MXC_DCD_ITEM(85, MMDC_P1_BASE_ADDR + 0x80c, 0x00440044)
-MXC_DCD_ITEM(86, MMDC_P1_BASE_ADDR + 0x810, 0x00440044)
+// CCM_BASE_ADDR = 0x020C4000
+//DDR clk
+    ldr r0, =0x020C8260
+    ldr r6, [r0]
+    lsr r6, r6, #16
+    and r6, r6, #0xff
+    cmp r6, #0x63
+    bne Label_mx6dl_speed
+// 528MHz
+    ldr r0, =CCM_BASE_ADDR
+    ldr r1, =0x00020324
+    str r1, [r0, #0x018]
+    b Label_mx6_speed_end
+Label_mx6dl_speed:
+// 400MHz
+    ldr r0, =CCM_BASE_ADDR
+    ldr r1, =0x00060324
+    str r1, [r0, #0x018]
+Label_mx6_speed_end:
 
-MXC_DCD_ITEM(87, MMDC_P0_BASE_ADDR + 0x8b8, 0x00000800)
-MXC_DCD_ITEM(88, MMDC_P1_BASE_ADDR + 0x8b8, 0x00000800)
+// vab820
+    cmp r6, #0x63
+    bne Label_mx6dl_gpio
+    ldr r1, =0x05
+    ldr r0, =0x20e02fc
+    str r1, [r0]
+    ldr r0, =0x20e0300
+    str r1, [r0]
+    b Label_mx6_gpio_end
+Label_mx6dl_gpio:
+    ldr r1, =0x05
+    ldr r0, =0x20e0284
+    str r1, [r0]
+    ldr r0, =0x20e0288
+    str r1, [r0]
+Label_mx6_gpio_end:
+    ldr r0, =0x20a0004
+    ldr r1, =0x00
+    str r1, [r0]
+    ldr r0, =0x20a0008
+    ldr r1, [r0]
+    and r1, #3
+    cmp r1, #1
+    beq Label_vab820_4g_a
+    cmp r1, #2
+    beq Label_vab820_2g
+    // default r1 = 3 = 1g
+    b Label_vab820_1g
+Label_vab820_4g_a:
+    b Label_vab820_4g_b
 
-MXC_DCD_ITEM(89, MMDC_P0_BASE_ADDR + 0x01c, 0x00000000)
-MXC_DCD_ITEM(90, MMDC_P0_BASE_ADDR + 0x404, 0x00011006)
+    .ltorg
+Label_vab820_2g:
+    cmp r6, #0x63
+    bne Label_mx6dl_2g_ram
+// imx6q_2g_ram
+#include "vab820_mx6q_2g.cfg"
+    b Label_mx6_2g_ram_end
+Label_mx6dl_2g_ram:
+// imx6dl_2g_ram    
+#include "vab820_mx6dl_2g.cfg"
+Label_mx6_2g_ram_end:
+    b Label_vab820_ram_setting_end
+
+    .ltorg
+Label_vab820_1g:
+    cmp r6, #0x63
+    bne Label_mx6dl_1g_ram
+// imx6q_1g_ram
+#include "vab820_mx6q_1g.cfg"
+    b Label_mx6_1g_ram_end
+Label_mx6dl_1g_ram:
+// imx6dl_1g_ram
+#include "vab820_mx6dl_1g.cfg"
+Label_mx6_1g_ram_end:
+    b Label_vab820_ram_setting_end
+
+    .ltorg
+Label_vab820_4g_b:
+  #include "vab820_mx6q_4g.cfg"
+
+
+Label_vab820_ram_setting_end:
+/*
+    The following is to fill in those arguments for this ROM function
+    pu_irom_hwcnfg_setup(void **start, size_t *bytes, const void *boot_data)
+
+    This function is used to copy data from the storage media into DDR.
+
+    start - Initial (possibly partial) image load address on entry.  Final
+    image load address on exit.
+    bytes - Initial (possibly partial) image size on entry.  Final image size
+    on exit.
+    boot_data - Initial @ref ivt Boot Data load address.
+*/
+    adr r0, DDR_DEST_ADDR
+    adr r1, COPY_SIZE
+    adr r2, BOOT_DATA
+
+/*
+ * check the _pu_irom_api_table for the address
+ * pu_irom_hwcnfg_setup is in 0x1fb5  ERIC : < what is the address in Rigel >
+ */
+before_calling_rom___pu_irom_hwcnfg_setup:
+    ldr r3, =ROM_VERSION_OFFSET
+    ldr r4, [r3]
+    cmp r6, #0x63
+    bne Label_mx6dl_version
+    ldr r3, =ROM_VERSION_TO15
+    cmp r4, r3
+    ldrge r3, =ROM_API_TABLE_BASE_ADDR_MX6DQ_TO15
+    b Label_mx6_version_end
+Label_mx6dl_version:
+    ldr r3, =ROM_VERSION_TO12
+    cmp r4, r3
+    ldrge r3, =ROM_API_TABLE_BASE_ADDR_MX6DL_TO12
+Label_mx6_version_end:
+    ldrlt r3, =ROM_API_TABLE_BASE_ADDR_LEGACY
+    ldr r4, [r3, #ROM_API_HWCNFG_SETUP_OFFSET]
+    blx r4
+after_calling_rom___pu_irom_hwcnfg_setup:
+
+/* To return to ROM from plugin, we need to fill in these argument.
+ * Here is what need to do:
+ * Need to construct the paramters for this function before return to ROM:
+ * plugin_download(void **start, size_t *bytes, UINT32 *ivt_offset)
+ */
+    pop {r0-r4, lr}
+    ldr r5, DDR_DEST_ADDR
+    str r5, [r0]
+    ldr r5, COPY_SIZE
+    str r5, [r1]
+    mov r5, #0x400  /* Point to the second IVT table at offset 0x42C */
+    add r5, r5, #0x2C
+    str r5, [r2]
+    mov r0, #1
+
+    bx lr          /* return back to ROM code */
+
+DDR_DEST_ADDR:    .word   TEXT_BASE
+COPY_SIZE:        .word   _end_of_copy  - TEXT_BASE + CONFIG_FLASH_HEADER_OFFSET
+BOOT_DATA:        .word   TEXT_BASE
+                  .word   _end_of_copy  - TEXT_BASE + CONFIG_FLASH_HEADER_OFFSET
+                  .word   0
+/*********************************************************************/
+
+
+
+
+#endif
 
 #endif

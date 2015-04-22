@@ -24,6 +24,7 @@
 #include <asm/io.h>
 #include <asm/arch/mx6.h>
 #include <asm/arch/mx6_pins.h>
+#include <asm/arch/mx6dl_pins.h>
 #include <asm/arch/iomux-v3.h>
 #include <asm/errno.h>
 #include <miiphy.h>
@@ -65,7 +66,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static u32 system_rev;
+//static u32 system_rev;
 static enum boot_device boot_dev;
 
 static void set_gpio_output_val(unsigned base, unsigned mask, unsigned val)
@@ -99,10 +100,17 @@ static inline void setup_boot_device(void)
 		boot_dev = SATA_BOOT;
 		break;
 	case 0x3:
+// steven
+		if (bt_mem_type)
+			boot_dev = I2C_BOOT;
+		else
+			boot_dev = SPI_NOR_BOOT;
+#if 0
 		if (bt_mem_type)
 			boot_dev = SPI_NOR_BOOT;
 		else
 			boot_dev = I2C_BOOT;
+#endif
 		break;
 	case 0x4:
 	case 0x5:
@@ -174,38 +182,78 @@ void board_mmu_init(void)
 
 int dram_init(void)
 {
-	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
-	gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
-	return 0;
+ // Steven
+ ulong nRamSize = (1u * 1024 * 1024 * 1024);
+ u32 reg = readl(GPIO2_BASE_ADDR + GPIO_PSR);
+
+ switch ( reg&0x03 ) {
+  case 1:
+   // steven: 3.75GB
+   nRamSize = (3840u * 1024 * 1024) - 4096;
+   // steven: 3.5GB
+   //nRamSize = (3584u * 1024 * 1024);
+   break;
+  case 2: nRamSize = (2u * 1024 * 1024 * 1024); break;
+  default: nRamSize = (1u * 1024 * 1024 * 1024); break;
+ }
+ gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+ gd->bd->bi_dram[0].size = nRamSize;
+ return 0;
 }
 
 static void setup_uart(void)
 {
-	/* UART1 TXD */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_SD3_DAT6__UART1_TXD);
+ iomux_v3_cfg_t mx6q_pads[] = {
+  MX6Q_PAD_SD3_DAT6__UART1_TXD, /* UART1 TXD */
+  MX6Q_PAD_SD3_DAT7__UART1_RXD, /* UART1 RXD */
+  MX6Q_PAD_EIM_D26__UART2_TXD, /* UART2 TXD */
+  MX6Q_PAD_EIM_D27__UART2_RXD /* UART2 RXD */
+ };
+ iomux_v3_cfg_t mx6dl_pads[] = {
+  MX6DL_PAD_SD3_DAT6__UART1_TXD, /* UART1 TXD */
+  MX6DL_PAD_SD3_DAT7__UART1_RXD, /* UART1 RXD */
+  MX6DL_PAD_EIM_D26__UART2_TXD, /* UART2 TXD */
+  MX6DL_PAD_EIM_D27__UART2_RXD /* UART2 RXD */
+ };
+ iomux_v3_cfg_t* p = cpu_is_mx6q() ? mx6q_pads : mx6dl_pads;
+ int i;
 
-	/* UART1 RXD */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_SD3_DAT7__UART1_RXD);
-
-	/* UART2 TXD */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D26__UART2_TXD);
-
-	/* UART2 RXD */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D27__UART2_RXD);
+ for(i=0; i<ARRAY_SIZE(mx6q_pads); ++i) {
+  mxc_iomux_v3_setup_pad(p[i]);
+ }
 }
 
 #ifdef CONFIG_I2C_MXC
 static void setup_i2c(unsigned int module_base)
 {
+ iomux_v3_cfg_t mx6q_pads[] = {
+  MX6Q_PAD_CSI0_DAT8__I2C1_SDA, /* i2c1 SDA */
+  MX6Q_PAD_CSI0_DAT9__I2C1_SCL, /* i2c1 SCL */
+  MX6Q_PAD_KEY_ROW3__I2C2_SDA, /* i2c2 SDA */
+  MX6Q_PAD_KEY_COL3__I2C2_SCL, /* i2c2 SCL */
+  MX6Q_PAD_GPIO_16__I2C3_SDA, /* i2c3 SDA */
+  MX6Q_PAD_GPIO_5__I2C3_SCL, /* i2c3 SCL */
+ };
+ iomux_v3_cfg_t mx6dl_pads[] = {
+  MX6DL_PAD_CSI0_DAT8__I2C1_SDA, /* i2c1 SDA */
+  MX6DL_PAD_CSI0_DAT9__I2C1_SCL, /* i2c1 SCL */
+  MX6DL_PAD_KEY_ROW3__I2C2_SDA, /* i2c2 SDA */
+  MX6DL_PAD_KEY_COL3__I2C2_SCL, /* i2c2 SCL */
+  MX6DL_PAD_GPIO_16__I2C3_SDA, /* i2c3 SDA */
+  MX6DL_PAD_GPIO_5__I2C3_SCL, /* i2c3 SCL */
+ };
+	iomux_v3_cfg_t* p = cpu_is_mx6q() ? mx6q_pads : mx6dl_pads;
+	int nIndex = 0;
 	unsigned int reg;
 
 	switch (module_base) {
 	case I2C1_BASE_ADDR:
-		/* i2c1 SDA */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_CSI0_DAT8__I2C1_SDA);
+		nIndex = 0;
+		/* i2c SDA */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
-		/* i2c1 SCL */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_CSI0_DAT9__I2C1_SCL);
+		/* i2c SCL */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		/* Enable i2c clock */
 		reg = readl(CCM_BASE_ADDR + CLKCTL_CCGR2);
@@ -214,11 +262,12 @@ static void setup_i2c(unsigned int module_base)
 
 		break;
 	case I2C2_BASE_ADDR:
-		/* i2c2 SDA */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_KEY_ROW3__I2C2_SDA);
+		nIndex = 2;
+		/* i2c SDA */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
-		/* i2c2 SCL */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_KEY_COL3__I2C2_SCL);
+		/* i2c SCL */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		/* Enable i2c clock */
 		reg = readl(CCM_BASE_ADDR + CLKCTL_CCGR2);
@@ -227,11 +276,12 @@ static void setup_i2c(unsigned int module_base)
 
 		break;
 	case I2C3_BASE_ADDR:
-		/* GPIO_5 for I2C3_SCL */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_5__I2C3_SCL);
+		nIndex = 4;
+		/* i2c SDA */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
-		/* GPIO_16 for I2C3_SDA */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_16__I2C3_SDA);
+		/* i2c SCL */
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		/* Enable i2c clock */
 		reg = readl(CCM_BASE_ADDR + CLKCTL_CCGR2);
@@ -278,19 +328,33 @@ s32 spi_get_cfg(struct imx_spi_dev_t *dev)
 
 void spi_io_init(struct imx_spi_dev_t *dev)
 {
+	iomux_v3_cfg_t mx6q_pads[] = {
+		MX6Q_PAD_EIM_D16__ECSPI1_SCLK,
+		MX6Q_PAD_EIM_D17__ECSPI1_MISO,
+		MX6Q_PAD_EIM_D18__ECSPI1_MOSI,
+		MX6Q_PAD_EIM_D19__ECSPI1_SS1
+	};
+	iomux_v3_cfg_t mx6dl_pads[] = {
+		MX6DL_PAD_EIM_D16__ECSPI1_SCLK,
+		MX6DL_PAD_EIM_D17__ECSPI1_MISO,
+		MX6DL_PAD_EIM_D18__ECSPI1_MOSI,
+		MX6DL_PAD_EIM_D19__ECSPI1_SS1
+	};
+	iomux_v3_cfg_t* p = cpu_is_mx6q() ? mx6q_pads : mx6dl_pads;
+	int nIndex = 0;
 	switch (dev->base) {
 	case ECSPI1_BASE_ADDR:
 		/* SCLK */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D16__ECSPI1_SCLK);
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		/* MISO */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D17__ECSPI1_MISO);
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		/* MOSI */
-		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D18__ECSPI1_MOSI);
+		mxc_iomux_v3_setup_pad(p[nIndex++]);
 
 		if (dev->ss == 1)
-			mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D19__ECSPI1_SS1);
+			mxc_iomux_v3_setup_pad(p[nIndex++]);
 		break;
 	case ECSPI2_BASE_ADDR:
 	case ECSPI3_BASE_ADDR:
@@ -314,7 +378,8 @@ int board_eth_init(bd_t *bis)
 #ifdef CONFIG_CMD_MMC
 
 struct fsl_esdhc_cfg usdhc_cfg[2] = {
-	{USDHC3_BASE_ADDR, 1, 1, 1},
+// steven: USDHC3_BASE_ADDR -> USDHC2_BASE_ADDR
+	{USDHC2_BASE_ADDR, 1, 1, 1},
 	{USDHC4_BASE_ADDR, 1, 1, 1},
 };
 
@@ -327,6 +392,15 @@ iomux_v3_cfg_t mx6q_usdhc1_pads[] = {
 	MX6Q_PAD_SD1_DAT3__USDHC1_DAT3,
 };
 
+iomux_v3_cfg_t mx6dl_usdhc1_pads[] = {
+	MX6DL_PAD_SD1_CLK__USDHC1_CLK,
+	MX6DL_PAD_SD1_CMD__USDHC1_CMD,
+	MX6DL_PAD_SD1_DAT0__USDHC1_DAT0,
+	MX6DL_PAD_SD1_DAT1__USDHC1_DAT1,
+	MX6DL_PAD_SD1_DAT2__USDHC1_DAT2,
+	MX6DL_PAD_SD1_DAT3__USDHC1_DAT3,
+};
+
 iomux_v3_cfg_t mx6q_usdhc2_pads[] = {
 	MX6Q_PAD_SD2_CLK__USDHC2_CLK,
 	MX6Q_PAD_SD2_CMD__USDHC2_CMD,
@@ -334,6 +408,15 @@ iomux_v3_cfg_t mx6q_usdhc2_pads[] = {
 	MX6Q_PAD_SD2_DAT1__USDHC2_DAT1,
 	MX6Q_PAD_SD2_DAT2__USDHC2_DAT2,
 	MX6Q_PAD_SD2_DAT3__USDHC2_DAT3,
+};
+
+iomux_v3_cfg_t mx6dl_usdhc2_pads[] = {
+	MX6DL_PAD_SD2_CLK__USDHC2_CLK,
+	MX6DL_PAD_SD2_CMD__USDHC2_CMD,
+	MX6DL_PAD_SD2_DAT0__USDHC2_DAT0,
+	MX6DL_PAD_SD2_DAT1__USDHC2_DAT1,
+	MX6DL_PAD_SD2_DAT2__USDHC2_DAT2,
+	MX6DL_PAD_SD2_DAT3__USDHC2_DAT3,
 };
 
 iomux_v3_cfg_t mx6q_usdhc3_pads[] = {
@@ -345,6 +428,15 @@ iomux_v3_cfg_t mx6q_usdhc3_pads[] = {
 	MX6Q_PAD_SD3_DAT3__USDHC3_DAT3,
 };
 
+iomux_v3_cfg_t mx6dl_usdhc3_pads[] = {
+	MX6DL_PAD_SD3_CLK__USDHC3_CLK,
+	MX6DL_PAD_SD3_CMD__USDHC3_CMD,
+	MX6DL_PAD_SD3_DAT0__USDHC3_DAT0,
+	MX6DL_PAD_SD3_DAT1__USDHC3_DAT1,
+	MX6DL_PAD_SD3_DAT2__USDHC3_DAT2,
+	MX6DL_PAD_SD3_DAT3__USDHC3_DAT3,
+};
+
 iomux_v3_cfg_t mx6q_usdhc4_pads[] = {
 	MX6Q_PAD_SD4_CLK__USDHC4_CLK,
 	MX6Q_PAD_SD4_CMD__USDHC4_CMD,
@@ -352,28 +444,45 @@ iomux_v3_cfg_t mx6q_usdhc4_pads[] = {
 	MX6Q_PAD_SD4_DAT1__USDHC4_DAT1,
 	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2,
 	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3,
+// steven
+	MX6Q_PAD_SD4_DAT4__USDHC4_DAT4,
+	MX6Q_PAD_SD4_DAT5__USDHC4_DAT5,
+	MX6Q_PAD_SD4_DAT6__USDHC4_DAT6,
+	MX6Q_PAD_SD4_DAT7__USDHC4_DAT7,
+};
+
+iomux_v3_cfg_t mx6dl_usdhc4_pads[] = {
+	MX6DL_PAD_SD4_CLK__USDHC4_CLK,
+	MX6DL_PAD_SD4_CMD__USDHC4_CMD,
+	MX6DL_PAD_SD4_DAT0__USDHC4_DAT0,
+	MX6DL_PAD_SD4_DAT1__USDHC4_DAT1,
+	MX6DL_PAD_SD4_DAT2__USDHC4_DAT2,
+	MX6DL_PAD_SD4_DAT3__USDHC4_DAT3,
+// steven
+	MX6DL_PAD_SD4_DAT4__USDHC4_DAT4,
+	MX6DL_PAD_SD4_DAT5__USDHC4_DAT5,
+	MX6DL_PAD_SD4_DAT6__USDHC4_DAT6,
+	MX6DL_PAD_SD4_DAT7__USDHC4_DAT7,
 };
 
 int usdhc_gpio_init(bd_t *bis)
 {
 	s32 status = 0;
 	u32 index = 0;
+	iomux_v3_cfg_t* p;
 
 	for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; index++) {
 		switch (index) {
 		case 0:
-			mxc_iomux_v3_setup_multiple_pads(mx6q_usdhc3_pads,
-							 sizeof
-							 (mx6q_usdhc3_pads) /
-							 sizeof(mx6q_usdhc3_pads
-								[0]));
+			p = cpu_is_mx6q() ? mx6q_usdhc2_pads : mx6dl_usdhc2_pads;
+			// steven: mx6q_usdhc3_pads -> mx6q_usdhc2_pads
+			mxc_iomux_v3_setup_multiple_pads(p,
+							 ARRAY_SIZE(mx6q_usdhc2_pads));
 			break;
 		case 1:
-			mxc_iomux_v3_setup_multiple_pads(mx6q_usdhc4_pads,
-							 sizeof
-							 (mx6q_usdhc4_pads) /
-							 sizeof(mx6q_usdhc4_pads
-								[0]));
+			p = cpu_is_mx6q() ? mx6q_usdhc4_pads : mx6dl_usdhc4_pads;
+			mxc_iomux_v3_setup_multiple_pads(p,
+							 ARRAY_SIZE(mx6q_usdhc4_pads));
 			break;
 		default:
 			printf("Warning: you configured more USDHC controllers"
@@ -386,6 +495,18 @@ int usdhc_gpio_init(bd_t *bis)
 
 	return status;
 }
+
+#ifdef CONFIG_DYNAMIC_MMC_DEVNO
+int get_mmc_env_devno(void)
+{
+ uint soc_sbmr = readl(SRC_BASE_ADDR + 0x4);
+ /* BOOT_CFG2[3] and BOOT_CFG2[4] */
+ switch( (soc_sbmr & 0x00001800) >> 11 ) {
+  case 3: return 1;
+  default: return 0;
+ }
+}
+#endif
 
 int board_mmc_init(bd_t *bis)
 {
@@ -409,6 +530,18 @@ u32 get_ddr_delay(struct fsl_esdhc_cfg *cfg)
 #endif
 
 #endif
+
+static void change_system_prompt(void)
+{
+ char* p = CONFIG_SYS_PROMPT;
+
+ if(cpu_is_mx6q()) {
+  strcpy(p, "MX6Q VAB820 U-Boot > ");
+ }
+ else {
+  strcpy(p, "MX6DL VAB820 U-Boot > ");
+ }
+}
 
 int board_init(void)
 {
@@ -434,6 +567,11 @@ int board_init(void)
 #ifdef CONFIG_I2C_MXC
 	setup_i2c(CONFIG_SYS_I2C_PORT);
 #endif
+// steven
+	/* Switch to 1GHZ */
+	clk_config(CONFIG_REF_CLK_FREQ, 1000, CPU_CLK);
+
+ change_system_prompt();
 
 	return 0;
 }
@@ -449,7 +587,10 @@ int check_recovery_cmd_file(void)
 	recovery_mode = check_and_clean_recovery_flag();
 
 	/* Check Recovery Combo Button press or not. */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_19__GPIO_4_5);
+	mxc_iomux_v3_setup_pad(
+		cpu_is_mx6q() ?
+		MX6Q_PAD_GPIO_19__GPIO_4_5 : MX6DL_PAD_GPIO_19__GPIO_4_5 
+	);
 	reg = readl(GPIO4_BASE_ADDR + GPIO_GDIR);
 	reg &= ~(1<<5);
 	writel(reg, GPIO4_BASE_ADDR + GPIO_GDIR);
@@ -468,7 +609,7 @@ int board_late_init(void)
 	return 0;
 }
 
-iomux_v3_cfg_t enet_pads[] = {
+iomux_v3_cfg_t mx6q_enet_pads[] = {
 	MX6Q_PAD_ENET_MDIO__ENET_MDIO,
 	MX6Q_PAD_ENET_MDC__ENET_MDC,
 	MX6Q_PAD_RGMII_TXC__ENET_RGMII_TXC,
@@ -489,18 +630,53 @@ iomux_v3_cfg_t enet_pads[] = {
 	MX6Q_PAD_RGMII_RD3__GPIO_6_29,
 	/* pin 33 - 1 - (CLK125_EN) 125Mhz clockout enabled */
 	MX6Q_PAD_RGMII_RX_CTL__GPIO_6_24,
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
-	MX6Q_PAD_GPIO_3__CCM_CLKO2,
+	//MX6Q_PAD_GPIO_0__CCM_CLKO,
+	//MX6Q_PAD_GPIO_3__CCM_CLKO2,
 	MX6Q_PAD_ENET_REF_CLK__ENET_TX_CLK,
 };
 
-iomux_v3_cfg_t enet_pads_final[] = {
+iomux_v3_cfg_t mx6q_enet_pads_final[] = {
 	MX6Q_PAD_RGMII_RXC__ENET_RGMII_RXC,
 	MX6Q_PAD_RGMII_RD0__ENET_RGMII_RD0,
 	MX6Q_PAD_RGMII_RD1__ENET_RGMII_RD1,
 	MX6Q_PAD_RGMII_RD2__ENET_RGMII_RD2,
 	MX6Q_PAD_RGMII_RD3__ENET_RGMII_RD3,
 	MX6Q_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL,
+};
+
+iomux_v3_cfg_t mx6dl_enet_pads[] = {
+	MX6DL_PAD_ENET_MDIO__ENET_MDIO,
+	MX6DL_PAD_ENET_MDC__ENET_MDC,
+	MX6DL_PAD_RGMII_TXC__ENET_RGMII_TXC,
+	MX6DL_PAD_RGMII_TD0__ENET_RGMII_TD0,
+	MX6DL_PAD_RGMII_TD1__ENET_RGMII_TD1,
+	MX6DL_PAD_RGMII_TD2__ENET_RGMII_TD2,
+	MX6DL_PAD_RGMII_TD3__ENET_RGMII_TD3,
+	MX6DL_PAD_RGMII_TX_CTL__ENET_RGMII_TX_CTL,
+	/* pin 35 - 1 (PHY_AD2) on reset */
+	MX6DL_PAD_RGMII_RXC__GPIO_6_30,
+	/* pin 32 - 1 - (MODE0) all */
+	MX6DL_PAD_RGMII_RD0__GPIO_6_25,
+	/* pin 31 - 1 - (MODE1) all */
+	MX6DL_PAD_RGMII_RD1__GPIO_6_27,
+	/* pin 28 - 1 - (MODE2) all */
+	MX6DL_PAD_RGMII_RD2__GPIO_6_28,
+	/* pin 27 - 1 - (MODE3) all */
+	MX6DL_PAD_RGMII_RD3__GPIO_6_29,
+	/* pin 33 - 1 - (CLK125_EN) 125Mhz clockout enabled */
+	MX6DL_PAD_RGMII_RX_CTL__GPIO_6_24,
+	//MX6Q_PAD_GPIO_0__CCM_CLKO,
+	//MX6Q_PAD_GPIO_3__CCM_CLKO2,
+	MX6DL_PAD_ENET_REF_CLK__ENET_TX_CLK,
+};
+
+iomux_v3_cfg_t mx6dl_enet_pads_final[] = {
+	MX6DL_PAD_RGMII_RXC__ENET_RGMII_RXC,
+	MX6DL_PAD_RGMII_RD0__ENET_RGMII_RD0,
+	MX6DL_PAD_RGMII_RD1__ENET_RGMII_RD1,
+	MX6DL_PAD_RGMII_RD2__ENET_RGMII_RD2,
+	MX6DL_PAD_RGMII_RD3__ENET_RGMII_RD3,
+	MX6DL_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL,
 };
 
 #ifdef DEBUG
@@ -550,31 +726,49 @@ int mx6_rgmii_rework(char *devname, int phy_addr)
 
 void enet_board_init(void)
 {
-	iomux_v3_cfg_t enet_reset =
-	    (MX6Q_PAD_EIM_D23__GPIO_3_23 &
-	     ~MUX_PAD_CTRL_MASK) | MUX_PAD_CTRL(0x48);
+	// steven: vab820 enet's reset pin is the same as sabresd
+	//unsigned int reg;
+	iomux_v3_cfg_t enet_reset = 
+		( cpu_is_mx6q() ? _MX6Q_PAD_ENET_CRS_DV__GPIO_1_25 : MX6DL_PAD_ENET_CRS_DV__GPIO_1_25
+			& ~MUX_PAD_CTRL_MASK) | MUX_PAD_CTRL(0x88);
+	iomux_v3_cfg_t* p;   
 
-	/* phy reset: gpio3-23 */
-	set_gpio_output_val(GPIO3_BASE_ADDR, (1 << 23), 0);
+/*	iomux_v3_cfg_t enet_reset =
+	    (MX6X_IOMUX(PAD_EIM_D23__GPIO_3_23 &
+	     ~MUX_PAD_CTRL_MASK) | MUX_PAD_CTRL(0x48);
+*/
+
+	/* phy reset: gpio1-25 */
+	// gpio1_25 to low
+	set_gpio_output_val(GPIO1_BASE_ADDR, (1 << 25), 0);
+	//set_gpio_output_val(GPIO3_BASE_ADDR, (1 << 23), 0);
+
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 30),
 			    (CONFIG_FEC0_PHY_ADDR >> 2));
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 25), 1);
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 27), 1);
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 28), 1);
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 29), 1);
-	mxc_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
+	p = cpu_is_mx6q() ? mx6q_enet_pads : mx6dl_enet_pads;
+	mxc_iomux_v3_setup_multiple_pads(p, ARRAY_SIZE(mx6q_enet_pads));
 	mxc_iomux_v3_setup_pad(enet_reset);
 	set_gpio_output_val(GPIO6_BASE_ADDR, (1 << 24), 1);
 
 	udelay(500);
-	set_gpio_output_val(GPIO3_BASE_ADDR, (1 << 23), 1);
-	mxc_iomux_v3_setup_multiple_pads(enet_pads_final,
-					 ARRAY_SIZE(enet_pads_final));
+
+	// gpio1_25 to high
+	set_gpio_output_val(GPIO1_BASE_ADDR, (1 << 25), 1);
+	//set_gpio_output_val(GPIO3_BASE_ADDR, (1 << 23), 1);
+
+	p = cpu_is_mx6q() ? mx6q_enet_pads_final : mx6dl_enet_pads_final;
+	mxc_iomux_v3_setup_multiple_pads(p, ARRAY_SIZE(mx6q_enet_pads_final));
 }
 
 int checkboard(void)
 {
-	printf("Board: MX6Q-SABRELITE:[ ");
+	//Steven
+	//printf("Board: MX6Q-SABRELITE:[ ");
+	printf( cpu_is_mx6q() ? "Board: MX6Q-VAB820:[ " : "Board: MX6DL-VAB820:[ " );
 
 	switch (__REG(SRC_BASE_ADDR + 0x8)) {
 	case 0x0001:
@@ -635,9 +829,16 @@ void udc_pins_setting(void)
 {
 #define GPIO_3_22_BIT_MASK (1<<22)
 	u32 reg;
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_1__USBOTG_ID);
-	/* USB_OTG_PWR */
-	mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D22__GPIO_3_22);
+	if (cpu_is_mx6q()) {
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_GPIO_1__USBOTG_ID));
+		/* USB_OTG_PWR */
+		mxc_iomux_v3_setup_pad(MX6Q_PAD_EIM_D22__GPIO_3_22));
+	}
+	else {
+		mxc_iomux_v3_setup_pad(MX6DL_PAD_GPIO_1__USBOTG_ID));
+		/* USB_OTG_PWR */
+		mxc_iomux_v3_setup_pad(MX6DL_PAD_EIM_D22__GPIO_3_22));
+	}
 
 	reg = readl(GPIO3_BASE_ADDR + GPIO_GDIR);
 	/* set gpio_3_22 as output */
@@ -652,3 +853,5 @@ void udc_pins_setting(void)
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 }
 #endif
+
+#include "viatools.c"
