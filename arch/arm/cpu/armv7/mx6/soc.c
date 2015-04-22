@@ -71,6 +71,17 @@ static unsigned int fuse = ~0;
 #include <asm/arch/mx6_secure.h>
 #endif
 
+// steven: function --start ==============
+// steven: debug_only
+void via_debug(int nIndex, int bOnOff);
+
+// return 0: cpu is not mx6q, 1: cpu is mx6q
+int cpu_is_mx6q(void) {
+ u32 sCpuType = readl(ANATOP_BASE_ADDR + 0x260);
+ return (sCpuType>>16)==0x63 ? 1 : 0;
+}
+// steven: function --end ==============
+
 u32 get_cpu_rev(void)
 {
 	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
@@ -135,6 +146,7 @@ void init_aips(void)
 	writel(0x00000000, &aips2->opacr2);
 	writel(0x00000000, &aips2->opacr3);
 	writel(0x00000000, &aips2->opacr4);
+
 }
 
 /*
@@ -309,6 +321,13 @@ void check_cpu_temperature(void)
 static void imx_reset_pfd(void)
 {
 	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
+	u32 nData; // steven
+
+	// steven
+	nData = BM_ANADIG_PFD_528_PFD1_CLKGATE | BM_ANADIG_PFD_528_PFD0_CLKGATE;
+	if (cpu_is_mx6q()) {
+		nData |= BM_ANADIG_PFD_528_PFD2_CLKGATE;
+	}
 
 	/*
 	 * Per the IC design, we need to gate/ungate all the unused PFDs
@@ -320,26 +339,13 @@ static void imx_reset_pfd(void)
 		BM_ANADIG_PFD_480_PFD2_CLKGATE |
 		BM_ANADIG_PFD_480_PFD1_CLKGATE |
 		BM_ANADIG_PFD_480_PFD0_CLKGATE, &anatop->pfd_480_set);
-#ifdef CONFIG_MX6Q
-	writel(BM_ANADIG_PFD_528_PFD2_CLKGATE  |
-		BM_ANADIG_PFD_528_PFD1_CLKGATE |
-		BM_ANADIG_PFD_528_PFD0_CLKGATE, &anatop->pfd_528_set);
-#else
-	writel(BM_ANADIG_PFD_528_PFD1_CLKGATE  |
-		BM_ANADIG_PFD_528_PFD0_CLKGATE, &anatop->pfd_528_set);
-#endif
+	writel(nData, &anatop->pfd_528_set);
+
 	writel(BM_ANADIG_PFD_480_PFD3_CLKGATE  |
 		BM_ANADIG_PFD_480_PFD2_CLKGATE |
 		BM_ANADIG_PFD_480_PFD1_CLKGATE |
 		BM_ANADIG_PFD_480_PFD0_CLKGATE, &anatop->pfd_480_clr);
-#ifdef CONFIG_MX6Q
-	writel(BM_ANADIG_PFD_528_PFD2_CLKGATE  |
-		BM_ANADIG_PFD_528_PFD1_CLKGATE |
-		BM_ANADIG_PFD_528_PFD0_CLKGATE, &anatop->pfd_528_clr);
-#else
-	writel(BM_ANADIG_PFD_528_PFD1_CLKGATE  |
-		BM_ANADIG_PFD_528_PFD0_CLKGATE, &anatop->pfd_528_clr);
-#endif
+	writel(nData, &anatop->pfd_528_clr);
 }
 
 static void imx_set_vddpu_power_down(void)
