@@ -283,6 +283,11 @@ int saveenv(void)
 		goto done;
 	}
 	env_new.crc = crc32(0, env_new.data, ENV_SIZE);
+ {
+  /* steven: support destroyenv */
+  int in_destroyenv(void);
+  if ( in_destroyenv() ) { env_new.crc++; }
+ }
 
 	puts("Erasing SPI flash...");
 	ret = spi_flash_erase(env_flash, CONFIG_ENV_OFFSET,

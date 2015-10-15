@@ -15,6 +15,7 @@
 #define PROG_PORTMAP    100000
 #define PROG_NFS        100003
 #define PROG_MOUNT      100005
+#define CONFIG_NFS_TIMEOUT 10000UL
 
 #define MSG_CALL        0
 #define MSG_REPLY       1

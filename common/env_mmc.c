@@ -147,6 +147,13 @@ int saveenv(void)
 	}
 
 	env_new->crc = crc32(0, &env_new->data[0], ENV_SIZE);
+
+ {
+  // steven: support destroyenv
+  int in_destroyenv(void);
+  if ( in_destroyenv() ) { env_new->crc++; }
+ }
+
 	printf("Writing to MMC(%d)... ", mmc_env_devno);
 	if (write_env(mmc, CONFIG_ENV_SIZE, offset, (u_char *)env_new)) {
 		puts("failed\n");
