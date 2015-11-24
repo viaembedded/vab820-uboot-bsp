@@ -19,7 +19,7 @@
 
 #define CONFIG_MACH_TYPE	3980
 /* steven: version */
-#define CONFIG_IDENT_STRING " VAB820 ver:2.0.6"
+#define CONFIG_IDENT_STRING " VAB820 ver:2.0.7"
 /* steven: UART2_BASE */
 #define CONFIG_MXC_UART_BASE	UART2_BASE
 /* steven: kernel parameter ttymxc1 */
